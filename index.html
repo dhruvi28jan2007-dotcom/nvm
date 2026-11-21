@@ -1,0 +1,690 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NLP Visualizer</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background: #f4f6fa;
+        color: #222;
+        margin: 0;
+        padding: 25px;
+    }
+
+    .container {
+        max-width: 1100px;
+        margin: auto;
+    }
+
+    h1 {
+        color: #4936a5;
+    }
+
+    .card {
+        background: white;
+        padding: 22px;
+        margin: 20px 0;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px #00000012;
+    }
+
+    textarea, input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 7px;
+        font-size: 15px;
+    }
+
+    button {
+        background: #5742c0;
+        color: white;
+        padding: 13px 22px;
+        border: none;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    button:hover {
+        background: #392b91;
+    }
+
+    .columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    th, td {
+        border: 1px solid #ddd;
+        padding: 11px;
+        text-align: left;
+    }
+
+    th {
+        background: #eeeaff;
+    }
+
+    .token {
+        display: inline-block;
+        background: #e9e5ff;
+        color: #4936a5;
+        padding: 8px 12px;
+        margin: 4px;
+        border-radius: 6px;
+    }
+
+    .result {
+        white-space: pre-wrap;
+        background: #f6f5fc;
+        padding: 12px;
+        border-radius: 7px;
+        overflow-wrap: anywhere;
+    }
+
+    .note {
+        color: #777;
+        font-size: 14px;
+    }
+
+    #embeddingGraph {
+        width: 100%;
+        height: 650px;
+    }
+
+    @media(max-width: 650px) {
+        .columns {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🧠 NLP Visualizer</h1>
+
+    <p>
+        Explore tokenization, spelling similarity,
+        static embeddings and contextual embeddings.
+    </p>
+
+    <!-- TRAINING VOCABULARY -->
+
+    <div class="card">
+
+        <h2>Training Vocabulary</h2>
+
+        <textarea id="training" rows="7">The cat sat on the mat.
+The dog sat on the rug.
+The cat likes the dog.
+The sun is hot today.
+I like my cat and my dog.
+The dog ran to the park.</textarea>
+
+    </div>
+
+
+    <!-- SENTENCE INPUT -->
+
+    <div class="card">
+
+        <h2>Enter Sentences to Compare</h2>
+
+        <div class="columns">
+
+            <div>
+                <label>Sentence 1</label>
+                <input id="sentence1" value="I have a bat">
+            </div>
+
+            <div>
+                <label>Sentence 2</label>
+                <input id="sentence2" value="I have a cat">
+            </div>
+
+        </div>
+
+        <button onclick="analyze()">Analyze Sentences</button>
+
+    </div>
+
+
+    <!-- TOKENIZATION -->
+
+    <div class="card" id="tokenSection" style="display:none">
+
+        <h2>Part 1: Tokenizer</h2>
+
+        <h3>Sentence 1 Tokens</h3>
+        <div id="tokens1" class="result"></div>
+        <p id="ids1"></p>
+
+        <h3>Sentence 2 Tokens</h3>
+        <div id="tokens2" class="result"></div>
+        <p id="ids2"></p>
+
+        <h3>Vocabulary Size</h3>
+        <p id="vocabSize"></p>
+
+        <h3>Vocabulary Frequency</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Token</th>
+                    <th>ID</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody id="vocabTable"></tbody>
+        </table>
+
+    </div>
+
+
+    <!-- WORD COMPARISON -->
+
+    <div class="card" id="comparisonSection" style="display:none">
+
+        <h2>Part 2: Word Comparison</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Word 1</th>
+                    <th>Word 2</th>
+                    <th>Exact Match</th>
+                    <th>Spelling Similarity</th>
+                </tr>
+            </thead>
+
+            <tbody id="comparisonTable"></tbody>
+        </table>
+
+        <p class="note">
+            Static and contextual embedding scores require
+            the original Python models and a backend connection.
+        </p>
+
+    </div>
+
+    <div class="card" id="graphSection" style="display:none">
+
+        <h2>3D Mismatched-Word Comparison</h2>
+        <div id="embeddingGraph"></div>
+
+    </div>
+
+
+    <!-- EMBEDDINGS -->
+
+    <div class="card">
+
+        <h2>Part 3: Embeddings</h2>
+
+        <p>
+            <b>Static Embeddings:</b>
+            GloVe (glove-wiki-gigaword-50)
+        </p>
+
+        <p>
+            <b>Contextual Embeddings:</b>
+            DistilBERT (distilbert-base-uncased)
+        </p>
+
+        <p class="note">
+            Connect these models through a Python API to calculate
+            actual embedding similarities and generate the original
+            3D visualization.
+        </p>
+
+    </div>
+
+</div>
+
+
+<script>
+
+// WORD PATTERN
+
+const WORD_PATTERN = /[A-Za-z0-9']+/g;
+
+
+// BUILD VOCABULARY
+
+function buildVocabulary(text) {
+
+    let words = text.toLowerCase().match(WORD_PATTERN) || [];
+
+    let frequency = {};
+
+    words.forEach(word => {
+        frequency[word] = (frequency[word] || 0) + 1;
+    });
+
+    let vocabulary = {
+        "[UNK]": 0
+    };
+
+    let sortedWords = Object.entries(frequency)
+        .sort((a, b) => b[1] - a[1]);
+
+    sortedWords.forEach(([word]) => {
+        vocabulary[word] = Object.keys(vocabulary).length;
+    });
+
+    // Character-level fallback tokens
+
+    for (let char of "abcdefghijklmnopqrstuvwxyz") {
+
+        if (!(char in vocabulary)) {
+            vocabulary[char] = Object.keys(vocabulary).length;
+        }
+
+        let piece = "##" + char;
+
+        if (!(piece in vocabulary)) {
+            vocabulary[piece] = Object.keys(vocabulary).length;
+        }
+    }
+
+    return { vocabulary, frequency };
+}
+
+
+// TOKENIZE SENTENCE
+
+function tokenizeSentence(sentence, vocabulary, preservedOOV) {
+
+    let words = sentence.toLowerCase().match(WORD_PATTERN) || [];
+
+    let tokens = [];
+    let ids = [];
+
+    words.forEach(word => {
+
+        if (word in vocabulary) {
+
+            tokens.push(word);
+            ids.push(vocabulary[word]);
+
+        }
+
+        else if (preservedOOV.has(word)) {
+
+            tokens.push(word);
+            ids.push(vocabulary["[UNK]"]);
+
+        }
+
+        else {
+
+            [...word].forEach((char, i) => {
+
+                let piece = i === 0 ? char : "##" + char;
+
+                if (piece in vocabulary) {
+
+                    tokens.push(piece);
+                    ids.push(vocabulary[piece]);
+
+                } else {
+
+                    tokens.push("[UNK]");
+                    ids.push(0);
+
+                }
+
+            });
+
+        }
+
+    });
+
+    return { tokens, ids };
+}
+
+
+// LEVENSHTEIN DISTANCE
+
+function levenshtein(a, b) {
+
+    let previous = Array.from(
+        { length: b.length + 1 },
+        (_, i) => i
+    );
+
+    for (let i = 0; i < a.length; i++) {
+
+        let current = [i + 1];
+
+        for (let j = 0; j < b.length; j++) {
+
+            let insert = current[j] + 1;
+            let del = previous[j + 1] + 1;
+
+            let replace = previous[j] +
+                (a[i] !== b[j] ? 1 : 0);
+
+            current.push(Math.min(insert, del, replace));
+
+        }
+
+        previous = current;
+
+    }
+
+    return previous[b.length];
+}
+
+
+// SPELLING SIMILARITY
+
+function spellingSimilarity(a, b) {
+
+    let distance = levenshtein(
+        a.toLowerCase(),
+        b.toLowerCase()
+    );
+
+    let longest = Math.max(a.length, b.length);
+
+    if (longest === 0) return 1;
+
+    return 1 - distance / longest;
+}
+
+
+function characterPieceTokens(word) {
+    return [...word.toLowerCase()].map((char, index) =>
+        index === 0 ? char : "##" + char
+    );
+}
+
+
+function characterOverlap(a, b) {
+    let setA = new Set([...a.toLowerCase()]);
+    let setB = new Set([...b.toLowerCase()]);
+    let shared = [...setA].filter(char => setB.has(char)).length;
+    let union = new Set([...setA, ...setB]).size;
+    return union === 0 ? 1 : shared / union;
+}
+
+
+// MAIN ANALYSIS
+
+function analyze() {
+
+    let training = document.getElementById("training").value;
+
+    let sentence1 = document.getElementById("sentence1").value;
+    let sentence2 = document.getElementById("sentence2").value;
+
+    if (!sentence1.trim() || !sentence2.trim()) {
+        alert("Please enter both sentences.");
+        return;
+    }
+
+    if (!training.trim()) {
+        alert("Please enter training sentences.");
+        return;
+    }
+
+    // BUILD VOCABULARY
+
+    let { vocabulary, frequency } = buildVocabulary(training);
+
+
+    // FIND SHARED UNKNOWN WORDS
+
+    let words1 = new Set(
+        (sentence1.toLowerCase().match(WORD_PATTERN) || [])
+    );
+
+    let words2 = new Set(
+        (sentence2.toLowerCase().match(WORD_PATTERN) || [])
+    );
+
+    let sharedOOV = new Set(
+        [...words1].filter(
+            word => words2.has(word) && !(word in vocabulary)
+        )
+    );
+
+
+    // TOKENIZATION
+
+    let result1 = tokenizeSentence(
+        sentence1, vocabulary, sharedOOV
+    );
+
+    let result2 = tokenizeSentence(
+        sentence2, vocabulary, sharedOOV
+    );
+
+
+    // DISPLAY TOKENS
+
+    document.getElementById("tokens1").innerHTML =
+        result1.tokens.map(t =>
+            `<span class="token">${t}</span>`
+        ).join("");
+
+    document.getElementById("tokens2").innerHTML =
+        result2.tokens.map(t =>
+            `<span class="token">${t}</span>`
+        ).join("");
+
+    document.getElementById("ids1").textContent =
+        "Token IDs: " + JSON.stringify(result1.ids);
+
+    document.getElementById("ids2").textContent =
+        "Token IDs: " + JSON.stringify(result2.ids);
+
+    document.getElementById("vocabSize").textContent =
+        Object.keys(vocabulary).length;
+
+
+    // VOCABULARY TABLE
+
+    let vocabTable = document.getElementById("vocabTable");
+
+    vocabTable.innerHTML = "";
+
+    Object.entries(frequency)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([word, count]) => {
+
+            vocabTable.innerHTML += `
+                <tr>
+                    <td>${word}</td>
+                    <td>${vocabulary[word]}</td>
+                    <td>${count}</td>
+                </tr>
+            `;
+
+        });
+
+
+    // WORD COMPARISON
+
+    let comparisonTable =
+        document.getElementById("comparisonTable");
+
+    comparisonTable.innerHTML = "";
+
+    let comparisonWords1 =
+        sentence1.match(WORD_PATTERN) || [];
+
+    let comparisonWords2 =
+        sentence2.match(WORD_PATTERN) || [];
+
+    let length = Math.min(
+        comparisonWords1.length,
+        comparisonWords2.length
+    );
+
+    let graphWords = [];
+    let mismatchLabels = [];
+
+    for (let i = 0; i < length; i++) {
+
+        let word1 = comparisonWords1[i].toLowerCase();
+        let word2 = comparisonWords2[i].toLowerCase();
+
+        let exactMatch = word1 === word2;
+
+        let similarity = spellingSimilarity(word1, word2);
+        let overlap = characterOverlap(word1, word2);
+        let pieceText1 = exactMatch ? word1 : characterPieceTokens(word1).join(" ");
+        let pieceText2 = exactMatch ? word2 : characterPieceTokens(word2).join(" ");
+
+        comparisonTable.innerHTML += `
+            <tr>
+                <td>${word1}</td>
+                <td>${word2}</td>
+                <td>${exactMatch ? "Yes" : "No"}</td>
+                <td>${(similarity * 100).toFixed(2)}%</td>
+            </tr>
+        `;
+
+        if (!exactMatch) {
+            graphWords.push({
+                x: similarity,
+                y: i + 1,
+                z: overlap,
+                label: `${pieceText1} ↔ ${pieceText2}`
+            });
+            mismatchLabels.push(
+                `${pieceText1} ↔ ${pieceText2}`
+            );
+        }
+
+    }
+
+    if (mismatchLabels.length > 0) {
+        let mismatchSet1 = new Set();
+        let mismatchSet2 = new Set();
+        let displayTokens1 = [];
+        let displayTokens2 = [];
+        let displayIds1 = [];
+        let displayIds2 = [];
+
+        for (let i = 0; i < length; i++) {
+            let word1 = (comparisonWords1[i] || "").toLowerCase();
+            let word2 = (comparisonWords2[i] || "").toLowerCase();
+            if (word1 && word1 !== word2) mismatchSet1.add(word1);
+            if (word2 && word1 !== word2) mismatchSet2.add(word2);
+        }
+
+        (sentence1.match(WORD_PATTERN) || []).forEach(word => {
+            let lower = word.toLowerCase();
+            if (mismatchSet1.has(lower)) {
+                characterPieceTokens(lower).forEach(piece => {
+                    displayTokens1.push(piece);
+                    displayIds1.push(piece in vocabulary ? vocabulary[piece] : 0);
+                });
+            } else {
+                displayTokens1.push(lower);
+                displayIds1.push(lower in vocabulary ? vocabulary[lower] : 0);
+            }
+        });
+
+        (sentence2.match(WORD_PATTERN) || []).forEach(word => {
+            let lower = word.toLowerCase();
+            if (mismatchSet2.has(lower)) {
+                characterPieceTokens(lower).forEach(piece => {
+                    displayTokens2.push(piece);
+                    displayIds2.push(piece in vocabulary ? vocabulary[piece] : 0);
+                });
+            } else {
+                displayTokens2.push(lower);
+                displayIds2.push(lower in vocabulary ? vocabulary[lower] : 0);
+            }
+        });
+
+        document.getElementById("tokens1").innerHTML =
+            displayTokens1.map(token =>
+                `<span class="token">${token}</span>`
+            ).join("");
+        document.getElementById("tokens2").innerHTML =
+            displayTokens2.map(token =>
+                `<span class="token">${token}</span>`
+            ).join("");
+        document.getElementById("ids1").textContent =
+            "Token IDs: " + JSON.stringify(displayIds1);
+        document.getElementById("ids2").textContent =
+            "Token IDs: " + JSON.stringify(displayIds2);
+    }
+
+    let graphTrace = {
+        x: graphWords.map(point => point.x),
+        y: graphWords.map(point => point.y),
+        z: graphWords.map(point => point.z),
+        text: graphWords.map(point => point.label),
+        type: "scatter3d",
+        mode: "markers+text",
+        textposition: "top center",
+        marker: {
+            size: 8,
+            color: graphWords.map(point => point.x),
+            colorscale: "Viridis",
+            opacity: 0.9
+        },
+        hovertemplate:
+            "<b>%{text}</b><br>" +
+            "Spelling similarity: %{x:.3f}<br>" +
+            "Word position: %{y}<br>" +
+            "Character overlap: %{z:.3f}" +
+            "<extra></extra>"
+    };
+
+    document.getElementById("graphSection").style.display =
+        graphWords.length > 0 ? "block" : "none";
+
+    if (graphWords.length > 0) {
+        Plotly.react("embeddingGraph", [graphTrace], {
+            title: "Non-Matching Words in 3D",
+            height: 650,
+            margin: { l: 0, r: 0, b: 0, t: 50 },
+            scene: {
+                xaxis: { title: "Spelling Similarity" },
+                yaxis: { title: "Word Position" },
+                zaxis: { title: "Character Overlap" }
+            }
+        });
+    }
+
+
+    // SHOW RESULTS
+
+    document.getElementById("tokenSection").style.display = "block";
+
+    document.getElementById("comparisonSection").style.display = "block";
+
+}
+
+</script>
+
+</body>
+</html>
